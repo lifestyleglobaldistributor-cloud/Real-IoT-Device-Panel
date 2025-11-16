@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real IoT Device Configuration Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-card: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --border: #e0e0e0;
+            --success: #22c55e;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --accent: #6366f1;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --bg-card: #2a2a2a;
+            --text-primary: #e5e5e5;
+            --text-secondary: #a3a3a3;
+            --border: #404040;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .header {
+            background: var(--bg-card);
+            border-bottom: 2px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            font-family: 'Courier New', monospace;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected { background: var(--success); animation: none; }
+        .status-dot.disconnected { background: var(--error); }
+        .status-dot.connecting { background: var(--warning); }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .theme-toggle {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .connection-panel {
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .connection-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            overflow-x: auto;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+            background: var(--bg-secondary);
+        }
+
+        .tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-group label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            font-family: 'Courier New', monospace;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-height: 44px;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #5558e3;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--error);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .alert-success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+        }
+
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid var(--warning);
+            color: var(--warning);
+        }
+
+        .alert-info {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid var(--info);
+            color: var(--info);
+        }
+
+        .code-block {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .diagnostic-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .diagnostic-card {
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .diagnostic-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            margin: 0.5rem 0;
+        }
+
+        .diagnostic-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .sensor-data {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .sensor-card {
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        .sensor-name {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .sensor-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            margin: 0.5rem 0;
+        }
+
+        .sensor-unit {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .log-entry {
+            padding: 0.5rem;
+            border-bottom: 1px solid var(--border);
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-error { color: var(--error); }
+        .log-warning { color: var(--warning); }
+        .log-info { color: var(--info); }
+        .log-success { color: var(--success); }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .form-grid, .connection-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔌 Real IoT Device Panel</h1>
+        <div class="header-controls">
+            <div class="status-indicator">
+                <span class="status-dot disconnected" id="statusDot"></span>
+                <span id="statusText">Disconnected</span>
+            </div>
+            <button class="theme-toggle" onclick="toggleTheme()">🌓 Theme</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Connection Panel -->
+        <div class="connection-panel">
+            <h3 style="margin-bottom: 1rem;">Device Connection Settings</h3>
+            <div class="connection-grid">
+                <div class="form-group">
+                    <label>Protocol</label>
+                    <select id="connectionProtocol" onchange="updateConnectionFields()">
+                        <option value="rest">REST API (HTTP)</option>
+                        <option value="mqtt">MQTT</option>
+                        <option value="websocket">WebSocket</option>
+                    </select>
+                </div>
+                <div class="form-group" id="restFields">
+                    <label>Device IP/URL</label>
+                    <input type="text" id="deviceUrl" placeholder="http://192.168.1.100" value="http://192.168.1.100">
+                </div>
+                <div class="form-group" id="mqttBrokerField" style="display:none;">
+                    <label>MQTT Broker</label>
+                    <input type="text" id="mqttBroker" placeholder="mqtt://broker.hivemq.com:8000/mqtt">
+                </div>
+                <div class="form-group" id="mqttTopicField" style="display:none;">
+                    <label>Base Topic</label>
+                    <input type="text" id="mqttTopic" placeholder="device/esp32" value="device/esp32">
+                </div>
+                <div class="form-group" id="wsField" style="display:none;">
+                    <label>WebSocket URL</label>
+                    <input type="text" id="wsUrl" placeholder="ws://192.168.1.100:81">
+                </div>
+                <div class="form-group">
+                    <label>API Key (Optional)</label>
+                    <input type="password" id="apiKey" placeholder="Enter API key if required">
+                </div>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="connectDevice()" id="connectBtn">Connect to Device</button>
+                <button class="btn btn-danger" onclick="disconnectDevice()" id="disconnectBtn" disabled>Disconnect</button>
+                <button class="btn btn-secondary" onclick="testConnection()">Test Connection</button>
+            </div>
+            <div id="connectionStatus"></div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('monitor')">Live Monitor</button>
+            <button class="tab" onclick="switchTab('wifi')">WiFi Config</button>
+            <button class="tab" onclick="switchTab('diagnostics')">Diagnostics</button>
+            <button class="tab" onclick="switchTab('ota')">OTA Update</button>
+            <button class="tab" onclick="switchTab('commands')">Send Commands</button>
+            <button class="tab" onclick="switchTab('logs')">Live Logs</button>
+        </div>
+
+        <!-- Live Monitor Tab -->
+        <div id="monitor" class="tab-content active">
+            <div class="card">
+                <div class="card-header">
+                    <span>Real-Time Sensor Data</span>
+                    <button class="btn btn-secondary" onclick="refreshSensorData()">🔄 Refresh</button>
+                </div>
+                <div class="sensor-data" id="sensorData">
+                    <div class="sensor-card">
+                        <div class="sensor-name">Temperature</div>
+                        <div class="sensor-value">--</div>
+                        <div class="sensor-unit">°C</div>
+                    </div>
+                    <div class="sensor-card">
+                        <div class="sensor-name">Humidity</div>
+                        <div class="sensor-value">--</div>
+                        <div class="sensor-unit">%</div>
+                    </div>
+                    <div class="sensor-card">
+                        <div class="sensor-name">Pressure</div>
+                        <div class="sensor-value">--</div>
+                        <div class="sensor-unit">hPa</div>
+                    </div>
+                    <div class="sensor-card">
+                        <div class="sensor-name">RSSI</div>
+                        <div class="sensor-value">--</div>
+                        <div class="sensor-unit">dBm</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Device Status</div>
+                <div class="diagnostic-grid" id="deviceStatus">
+                    <div class="diagnostic-card">
+                        <div class="diagnostic-label">Uptime</div>
+                        <div class="diagnostic-value">--</div>
+                    </div>
+                    <div class="diagnostic-card">
+                        <div class="diagnostic-label">Free Heap</div>
+                        <div class="diagnostic-value">--</div>
+                    </div>
+                    <div class="diagnostic-card">
+                        <div class="diagnostic-label">IP Address</div>
+                        <div class="diagnostic-value" style="font-size: 1rem;">--</div>
+                    </div>
+                    <div class="diagnostic-card">
+                        <div class="diagnostic-label">Firmware</div>
+                        <div class="diagnostic-value" style="font-size: 1rem;">--</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WiFi Config Tab -->
+        <div id="wifi" class="tab-content">
+            <div class="card">
+                <div class="card-header">Configure Device WiFi</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>SSID</label>
+                        <input type="text" id="wifiSsid" placeholder="Your_Network_Name">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="wifiPassword" placeholder="WiFi Password">
+                    </div>
+                    <div class="form-group">
+                        <label>Security</label>
+                        <select id="wifiSecurity">
+                            <option value="WPA2">WPA2-PSK</option>
+                            <option value="WPA3">WPA3</option>
+                            <option value="WPA">WPA-PSK</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Hostname</label>
+                        <input type="text" id="wifiHostname" placeholder="esp32-device" value="esp32-device">
+                    </div>
+                </div>
+                <div class="btn-group" style="margin-top: 1.5rem;">
+                    <button class="btn btn-primary" onclick="sendWiFiConfig()">Send WiFi Config</button>
+                    <button class="btn btn-secondary" onclick="scanNetworks()">Scan Networks</button>
+                </div>
+                <div id="wifiStatus"></div>
+                <div id="networkList"></div>
+            </div>
+        </div>
+
+        <!-- Diagnostics Tab -->
+        <div id="diagnostics" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <span>System Diagnostics</span>
+                    <button class="btn btn-primary" onclick="runDiagnostics()">Run Full Diagnostic</button>
+                </div>
+                <div id="diagnosticResults"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Network Tests</div>
+                <div class="form-group">
+                    <label>Ping Target</label>
+                    <input type="text" id="pingTarget" value="8.8.8.8">
+                </div>
+                <button class="btn btn-primary" onclick="pingTest()" style="margin-top: 1rem;">Run Ping Test</button>
+                <div id="pingResults"></div>
+            </div>
+        </div>
+
+        <!-- OTA Update Tab -->
+        <div id="ota" class="tab-content">
+            <div class="card">
+                <div class="card-header">Firmware OTA Update</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Current Firmware</label>
+                        <input type="text" id="currentFw" readonly placeholder="Loading...">
+                    </div>
+                    <div class="form-group">
+                        <label>Firmware URL</label>
+                        <input type="text" id="firmwareUrl" placeholder="http://server.com/firmware.bin">
+                    </div>
+                    <div class="form-group">
+                        <label>MD5 Checksum (Optional)</label>
+                        <input type="text" id="firmwareMd5" placeholder="Enter MD5 hash">
+                    </div>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <label style="font-size: 0.875rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Or Upload Firmware Binary</label>
+                    <input type="file" id="firmwareFile" accept=".bin" style="margin-bottom: 1rem;">
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-success" onclick="startOTAUpdate()">Start OTA Update</button>
+                    <button class="btn btn-danger" onclick="abortOTAUpdate()">Abort Update</button>
+                </div>
+                <div id="otaProgress"></div>
+                <div id="otaStatus"></div>
+            </div>
+        </div>
+
+        <!-- Commands Tab -->
+        <div id="commands" class="tab-content">
+            <div class="card">
+                <div class="card-header">Send Custom Commands</div>
+                <div class="form-group">
+                    <label>Command Type</label>
+                    <select id="cmdType">
+                        <option value="json">JSON Payload</option>
+                        <option value="raw">Raw String</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Endpoint / Topic</label>
+                    <input type="text" id="cmdEndpoint" placeholder="/api/command or topic/command">
+                </div>
+                <div class="form-group">
+                    <label>Payload</label>
+                    <textarea id="cmdPayload" placeholder='{"action": "reboot"}'></textarea>
+                </div>
+                <div class="btn-group" style="margin-top: 1rem;">
+                    <button class="btn btn-primary" onclick="sendCommand()">Send Command</button>
+                    <button class="btn btn-secondary" onclick="loadCommandTemplate()">Load Template</button>
+                </div>
+                <div id="cmdStatus"></div>
+                <div class="card" style="margin-top: 1rem;">
+                    <div class="card-header">Response</div>
+                    <div class="code-block" id="cmdResponse">No response yet...</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Quick Actions</div>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="quickCommand('reboot')">Reboot Device</button>
+                    <button class="btn btn-secondary" onclick="quickCommand('reset')">Factory Reset</button>
+                    <button class="btn btn-secondary" onclick="quickCommand('sleep')">Deep Sleep</button>
+                    <button class="btn btn-secondary" onclick="quickCommand('status')">Get Status</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs Tab -->
+        <div id="logs" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <span>Live Device Logs</span>
+                    <div class="btn-group">
+                        <button class="btn btn-secondary" onclick="clearLogs()">Clear</button>
+                        <button class="btn btn-secondary" onclick="exportLogs()">Export</button>
+                    </div>
+                </div>
+                <div class="code-block" id="logViewer" style="max-height: 500px;">
+                    Waiting for logs...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global connection state
+        let connectionState = {
+            protocol: 'rest',
+            connected: false,
+            device: null,
+            ws: null,
+            mqttClient: null,
+            monitorInterval: null
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateConnectionFields();
+            loadTheme();
+        });
+
+        // Theme Management
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme');
+            const newTheme = current === 'dark' ? '' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        function loadTheme() {
+            const theme = localStorage.getItem('theme');
+            if (theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+        }
+
+        // Tab Management
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+        }
+
+        // Connection Management
+        function updateConnectionFields() {
+            const protocol = document.getElementById('connectionProtocol').value;
+            connectionState.protocol = protocol;
+
+            document.getElementById('restFields').style.display = protocol === 'rest' ? 'block' : 'none';
+            document.getElementById('mqttBrokerField').style.display = protocol === 'mqtt' ? 'block' : 'none';
+            document.getElementById('mqttTopicField').style.display = protocol === 'mqtt' ? 'block' : 'none';
+            document.getElementById('wsField').style.display = protocol === 'websocket' ? 'block' : 'none';
+        }
+
+        async function connectDevice() {
+            const protocol = connectionState.protocol;
+            updateStatus('connecting', 'Connecting...');
+
+            try {
+                if (protocol === 'rest') {
+                    await connectREST();
+                } else if (protocol === 'websocket') {
+                    await connectWebSocket();
+                } else if (protocol === 'mqtt') {
+                    await connectMQTT();
+                }
+            } catch (error) {
+                showAlert('connectionStatus', 'error', `Connection failed: ${error.message}`);
+                updateStatus('disconnected', 'Connection Failed');
+            }
+        }
+
+        async function connectREST() {
+            const url = document.getElementById('deviceUrl').value;
+            const apiKey = document.getElementById('apiKey').value;
+
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+
+            // Test connection with status endpoint
+            const response = await fetch(`${url}/api/status`, { headers });
+            if (!response.ok) throw new Error('Device not responding');
+
+            const data = await response.json();
+            connectionState.connected = true;
+            connectionState.device = { url, headers };
+
+            updateStatus('connected', 'Connected via REST');
+            showAlert('connectionStatus', 'success', `Connected to device: ${data.hostname || 'Unknown'}`);
+
+            // Start monitoring
+            startMonitoring();
+            updateDeviceInfo(data);
+
+            document.getElementById('connectBtn').disabled = true;
+            document.getElementById('disconnectBtn').disabled = false;
+        }
+
+        async function connectWebSocket() {
+            const wsUrl = document.getElementById('wsUrl').value;
+
+            return new Promise((resolve, reject) => {
+                const ws = new WebSocket(wsUrl);
+
+                ws.onopen = () => {
+                    connectionState.ws = ws;
+                    connectionState.connected = true;
+                    updateStatus('connected', 'Connected via WebSocket');
+                    showAlert('connectionStatus', 'success', 'WebSocket connected successfully');
+                    
+                    document.getElementById('connectBtn').disabled = true;
+                    document.getElementById('disconnectBtn').disabled = false;
+
+                    // Request initial data
+                    ws.send(JSON.stringify({ cmd: 'get_status' }));
+                    resolve();
+                };
+
+                ws.onerror = (error) => {
+                    reject(new Error('WebSocket connection failed'));
+                };
+
+                ws.onmessage = (event) => {
+                    handleWebSocketMessage(event.data);
+                };
+
+                ws.onclose = () => {
+                    if (connectionState.connected) {
+                        updateStatus('disconnected', 'WebSocket Disconnected');
+                        connectionState.connected = false;
+                    }
+                };
+
+                setTimeout(() => reject(new Error('Connection timeout')), 5000);
+            });
+        }
+
+        async function connectMQTT() {
+            const broker = document.getElementById('mqttBroker').value;
+            showAlert('connectionStatus', 'info', 'MQTT connection requires Paho MQTT library. For browser MQTT, use WebSocket MQTT (ws://broker:port/mqtt)');
+            
+            // Note: Real MQTT implementation would use Paho MQTT or similar
+            // This is a placeholder showing the structure
+            throw new Error('Please use WebSocket protocol for browser-based MQTT');
+        }
+
+        function disconnectDevice() {
+            if (connectionState.ws) {
+                connectionState.ws.close();
+                connectionState.ws = null;
+            }
+            
+            if (connectionState.monitorInterval) {
+                clearInterval(connectionState.monitorInterval);
+                connectionState.monitorInterval = null;
+            }
+
+            connectionState.connected = false;
+            updateStatus('disconnected', 'Disconnected');
+            showAlert('connectionStatus', 'info', 'Disconnected from device');
+
+            document.getElementById('connectBtn').disabled = false;
+            document.getElementById('disconnectBtn').disabled = true;
+        }
+
+        function updateStatus(state, text) {
+            const dot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+
+            dot.className = `status-dot ${state}`;
+            statusText.textContent = text;
+        }
+
+        function showAlert(containerId, type, message) {
+            const container = document.getElementById(containerId);
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.innerHTML = `<span>⚠️</span><span>${message}</span>`;
+            container.innerHTML = '';
+            container.appendChild(alert);
+        }
+
+        // Live Monitoring
+        function startMonitoring() {
+            if (connectionState.monitorInterval) {
+                clearInterval(connectionState.monitorInterval);
+            }
+
+            // Poll device every 2 seconds
+            connectionState.monitorInterval = setInterval(async () => {
+                if (connectionState.protocol === 'rest' && connectionState.connected) {
+                    await refreshSensorData();
+                }
+            }, 2000);
+        }
+
+        async function refreshSensorData() {
+            if (!connectionState.connected || connectionState.protocol !== 'rest') return;
+
+            try {
+                const { url, headers } = connectionState.device;
+                
+                // Fetch sensor data
+                const sensorResponse = await fetch(`${url}/api/sensors`, { headers });
+                if (sensorResponse.ok) {
+                    const data = await sensorResponse.json();
+                    updateSensorDisplay(data);
+                }
+
+                // Fetch device status
+                const statusResponse = await fetch(`${url}/api/status`, { headers });
+                if (statusResponse.ok) {
+                    const status = await statusResponse.json();
+                    updateDeviceInfo(status);
+                }
+            } catch (error) {
+                console.error('Monitoring error:', error);
+            }
+        }
+
+        function updateSensorDisplay(data) {
+            const container = document.getElementById('sensorData');
+            container.innerHTML = '';
+
+            // Handle different data formats
+            const sensors = data.sensors || data;
+            
+            for (const [key, value] of Object.entries(sensors)) {
+                const card = document.createElement('div');
+                card.className = 'sensor-card';
+                
+                let displayValue = value;
+                let unit = '';
+                
+                if (typeof value === 'object' && value.value !== undefined) {
+                    displayValue = value.value;
+                    unit = value.unit || '';
+                } else if (key.includes('temp')) {
+                    unit = '°C';
+                } else if (key.includes('hum')) {
+                    unit = '%';
+                } else if (key.includes('press')) {
+                    unit = 'hPa';
+                } else if (key.includes('rssi')) {
+                    unit = 'dBm';
+                }
+
+                card.innerHTML = `
+                    <div class="sensor-name">${key}</div>
+                    <div class="sensor-value">${parseFloat(displayValue).toFixed(2)}</div>
+                    <div class="sensor-unit">${unit}</div>
+                `;
+                container.appendChild(card);
+            }
+        }
+
+        function updateDeviceInfo(data) {
+            // Update firmware version
+            if (data.firmware) {
+                document.getElementById('currentFw').value = data.firmware;
+            }
+
+            // Update status cards
+            const statusGrid = document.getElementById('deviceStatus');
+            const cards = statusGrid.querySelectorAll('.diagnostic-value');
+            
+            if (cards[0] && data.uptime) cards[0].textContent = formatUptime(data.uptime);
+            if (cards[1] && data.freeHeap) cards[1].textContent = `${Math.round(data.freeHeap / 1024)}KB`;
+            if (cards[2] && data.ip) cards[2].textContent = data.ip;
+            if (cards[3] && data.firmware) cards[3].textContent = data.firmware;
+        }
+
+        function formatUptime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            return `${hours}h ${minutes}m`;
+        }
+
+        function handleWebSocketMessage(data) {
+            try {
+                const message = JSON.parse(data);
+                
+                if (message.type === 'sensor') {
+                    updateSensorDisplay(message.data);
+                } else if (message.type === 'status') {
+                    updateDeviceInfo(message.data);
+                } else if (message.type === 'log') {
+                    addLog(message.level || 'info', message.message);
+                }
+            } catch (error) {
+                addLog('error', `Failed to parse message: ${data}`);
+            }
+        }
+
+        // WiFi Configuration
+        async function sendWiFiConfig() {
+            if (!connectionState.connected) {
+                showAlert('wifiStatus', 'error', 'Not connected to device');
+                return;
+            }
+
+            const config = {
+                ssid: document.getElementById('wifiSsid').value,
+                password: document.getElementById('wifiPassword').value,
+                security: document.getElementById('wifiSecurity').value,
+                hostname: document.getElementById('wifiHostname').value
+            };
+
+            if (!config.ssid) {
+                showAlert('wifiStatus', 'error', 'SSID is required');
+                return;
+            }
+
+            try {
+                const result = await sendDeviceCommand('/api/wifi/config', config);
+                showAlert('wifiStatus', 'success', `WiFi configured successfully. Device will restart.`);
+                addLog('success', `WiFi configured: ${config.ssid}`);
+            } catch (error) {
+                showAlert('wifiStatus', 'error', `Failed to configure WiFi: ${error.message}`);
+            }
+        }
+
+        async function scanNetworks() {
+            if (!connectionState.connected) {
+                showAlert('wifiStatus', 'error', 'Not connected to device');
+                return;
+            }
+
+            showAlert('wifiStatus', 'info', 'Scanning for networks...');
+
+            try {
+                const result = await sendDeviceCommand('/api/wifi/scan', {});
+                const networks = result.networks || [];
+                
+                const networkList = document.getElementById('networkList');
+                networkList.innerHTML = '<div class="card"><div class="card-header">Available Networks</div>';
+                
+                networks.forEach(net => {
+                    const div = document.createElement('div');
+                    div.className = 'device-item';
+                    div.innerHTML = `
+                        <div class="device-info">
+                            <div class="device-name">${net.ssid}</div>
+                            <div class="device-details">Signal: ${net.rssi} dBm | Security: ${net.security}</div>
+                        </div>
+                        <button class="btn btn-secondary" onclick="selectNetwork('${net.ssid}')">Select</button>
+                    `;
+                    networkList.appendChild(div);
+                });
+                
+                networkList.innerHTML += '</div>';
+                showAlert('wifiStatus', 'success', `Found ${networks.length} networks`);
+            } catch (error) {
+                showAlert('wifiStatus', 'error', `Scan failed: ${error.message}`);
+            }
+        }
+
+        function selectNetwork(ssid) {
+            document.getElementById('wifiSsid').value = ssid;
+        }
+
+        // Diagnostics
+        async function runDiagnostics() {
+            if (!connectionState.connected) {
+                showAlert('connectionStatus', 'error', 'Not connected to device');
+                return;
+            }
+
+            const container = document.getElementById('diagnosticResults');
+            container.innerHTML = '<div class="alert alert-info">Running diagnostics...</div>';
+
+            try {
+                const result = await sendDeviceCommand('/api/diagnostics', {});
+                
+                container.innerHTML = '<div class="diagnostic-grid">';
+                
+                for (const [key, value] of Object.entries(result)) {
+                    container.innerHTML += `
+                        <div class="diagnostic-card">
+                            <div class="diagnostic-label">${key}</div>
+                            <div class="diagnostic-value">${value}</div>
+                        </div>
+                    `;
+                }
+                
+                container.innerHTML += '</div>';
+            } catch (error) {
+                container.innerHTML = `<div class="alert alert-error">Diagnostic failed: ${error.message}</div>`;
+            }
+        }
+
+        async function pingTest() {
+            const target = document.getElementById('pingTarget').value;
+            const container = document.getElementById('pingResults');
+            
+            if (!connectionState.connected) {
+                container.innerHTML = '<div class="alert alert-error">Not connected to device</div>';
+                return;
+            }
+
+            container.innerHTML = '<div class="alert alert-info">Running ping test...</div>';
+
+            try {
+                const result = await sendDeviceCommand('/api/ping', { target });
+                
+                container.innerHTML = `
+                    <div class="alert alert-success">
+                        Ping Results:<br>
+                        Target: ${target}<br>
+                        Response Time: ${result.time}ms<br>
+                        TTL: ${result.ttl || 'N/A'}<br>
+                        Packet Loss: ${result.loss || 0}%
+                    </div>
+                `;
+            } catch (error) {
+                container.innerHTML = `<div class="alert alert-error">Ping failed: ${error.message}</div>`;
+            }
+        }
+
+        // OTA Update
+        async function startOTAUpdate() {
+            if (!connectionState.connected) {
+                showAlert('otaStatus', 'error', 'Not connected to device');
+                return;
+            }
+
+            const firmwareUrl = document.getElementById('firmwareUrl').value;
+            const firmwareFile = document.getElementById('firmwareFile').files[0];
+            const md5 = document.getElementById('firmwareMd5').value;
+
+            if (!firmwareUrl && !firmwareFile) {
+                showAlert('otaStatus', 'error', 'Please provide firmware URL or upload a file');
+                return;
+            }
+
+            try {
+                let updatePayload = {};
+
+                if (firmwareFile) {
+                    // Upload firmware binary
+                    showAlert('otaStatus', 'info', 'Uploading firmware...');
+                    const formData = new FormData();
+                    formData.append('firmware', firmwareFile);
+                    
+                    const { url, headers } = connectionState.device;
+                    const uploadResponse = await fetch(`${url}/api/ota/upload`, {
+                        method: 'POST',
+                        headers: { 'Authorization': headers['Authorization'] },
+                        body: formData
+                    });
+
+                    if (!uploadResponse.ok) throw new Error('Upload failed');
+                    
+                    const uploadResult = await uploadResponse.json();
+                    updatePayload = { uploaded: true, path: uploadResult.path };
+                } else {
+                    updatePayload = { url: firmwareUrl, md5: md5 || null };
+                }
+
+                // Start OTA update
+                showAlert('otaStatus', 'info', 'Starting OTA update...');
+                const result = await sendDeviceCommand('/api/ota/update', updatePayload);
+
+                // Show progress
+                document.getElementById('otaProgress').innerHTML = `
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="otaProgressFill" style="width: 0%">0%</div>
+                    </div>
+                `;
+
+                // Poll for progress
+                pollOTAProgress();
+
+            } catch (error) {
+                showAlert('otaStatus', 'error', `OTA update failed: ${error.message}`);
+            }
+        }
+
+        async function pollOTAProgress() {
+            const pollInterval = setInterval(async () => {
+                try {
+                    const result = await sendDeviceCommand('/api/ota/progress', {});
+                    const progress = result.progress || 0;
+                    const progressFill = document.getElementById('otaProgressFill');
+                    
+                    if (progressFill) {
+                        progressFill.style.width = `${progress}%`;
+                        progressFill.textContent = `${progress}%`;
+                    }
+
+                    if (progress >= 100 || result.status === 'complete') {
+                        clearInterval(pollInterval);
+                        showAlert('otaStatus', 'success', 'OTA update completed! Device will restart.');
+                        addLog('success', 'Firmware updated successfully');
+                    } else if (result.status === 'error') {
+                        clearInterval(pollInterval);
+                        showAlert('otaStatus', 'error', `Update failed: ${result.error}`);
+                    }
+                } catch (error) {
+                    clearInterval(pollInterval);
+                    showAlert('otaStatus', 'error', 'Lost connection during update');
+                }
+            }, 1000);
+        }
+
+        function abortOTAUpdate() {
+            if (confirm('Are you sure you want to abort the firmware update?')) {
+                sendDeviceCommand('/api/ota/abort', {})
+                    .then(() => {
+                        showAlert('otaStatus', 'warning', 'OTA update aborted');
+                    })
+                    .catch(error => {
+                        showAlert('otaStatus', 'error', `Failed to abort: ${error.message}`);
+                    });
+            }
+        }
+
+        // Custom Commands
+        async function sendCommand() {
+            if (!connectionState.connected) {
+                showAlert('cmdStatus', 'error', 'Not connected to device');
+                return;
+            }
+
+            const endpoint = document.getElementById('cmdEndpoint').value;
+            const payloadText = document.getElementById('cmdPayload').value;
+            const cmdType = document.getElementById('cmdType').value;
+
+            if (!endpoint) {
+                showAlert('cmdStatus', 'error', 'Endpoint/Topic is required');
+                return;
+            }
+
+            try {
+                let payload = payloadText;
+                
+                if (cmdType === 'json') {
+                    payload = JSON.parse(payloadText);
+                }
+
+                showAlert('cmdStatus', 'info', 'Sending command...');
+                const result = await sendDeviceCommand(endpoint, payload);
+
+                document.getElementById('cmdResponse').textContent = JSON.stringify(result, null, 2);
+                showAlert('cmdStatus', 'success', 'Command sent successfully');
+                addLog('info', `Command sent to ${endpoint}`);
+            } catch (error) {
+                showAlert('cmdStatus', 'error', `Command failed: ${error.message}`);
+                document.getElementById('cmdResponse').textContent = error.message;
+            }
+        }
+
+        async function quickCommand(action) {
+            const commands = {
+                reboot: { endpoint: '/api/system/reboot', payload: {} },
+                reset: { endpoint: '/api/system/reset', payload: {} },
+                sleep: { endpoint: '/api/system/sleep', payload: { duration: 3600 } },
+                status: { endpoint: '/api/status', payload: {} }
+            };
+
+            const cmd = commands[action];
+            if (!cmd) return;
+
+            try {
+                showAlert('cmdStatus', 'info', `Executing ${action}...`);
+                const result = await sendDeviceCommand(cmd.endpoint, cmd.payload);
+                document.getElementById('cmdResponse').textContent = JSON.stringify(result, null, 2);
+                showAlert('cmdStatus', 'success', `${action} completed`);
+            } catch (error) {
+                showAlert('cmdStatus', 'error', `${action} failed: ${error.message}`);
+            }
+        }
+
+        function loadCommandTemplate() {
+            const templates = [
+                { name: 'Reboot', endpoint: '/api/system/reboot', payload: '{}' },
+                { name: 'Set Parameter', endpoint: '/api/config', payload: '{"key": "value"}' },
+                { name: 'Get Sensors', endpoint: '/api/sensors', payload: '{}' },
+                { name: 'Trigger Action', endpoint: '/api/action', payload: '{"action": "trigger", "pin": 5}' }
+            ];
+
+            const template = templates[Math.floor(Math.random() * templates.length)];
+            document.getElementById('cmdEndpoint').value = template.endpoint;
+            document.getElementById('cmdPayload').value = template.payload;
+            showAlert('cmdStatus', 'info', `Loaded template: ${template.name}`);
+        }
+
+        // Core Communication Function
+        async function sendDeviceCommand(endpoint, payload) {
+            if (connectionState.protocol === 'rest') {
+                const { url, headers } = connectionState.device;
+                const response = await fetch(`${url}${endpoint}`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                return await response.json();
+            } else if (connectionState.protocol === 'websocket') {
+                return new Promise((resolve, reject) => {
+                    const requestId = Date.now();
+                    const message = { id: requestId, endpoint, payload };
+
+                    const handler = (event) => {
+                        const response = JSON.parse(event.data);
+                        if (response.id === requestId) {
+                            connectionState.ws.removeEventListener('message', handler);
+                            if (response.error) {
+                                reject(new Error(response.error));
+                            } else {
+                                resolve(response.data);
+                            }
+                        }
+                    };
+
+                    connectionState.ws.addEventListener('message', handler);
+                    connectionState.ws.send(JSON.stringify(message));
+
+                    setTimeout(() => {
+                        connectionState.ws.removeEventListener('message', handler);
+                        reject(new Error('Command timeout'));
+                    }, 10000);
+                });
+            }
+        }
+
+        // Test Connection
+        async function testConnection() {
+            const protocol = document.getElementById('connectionProtocol').value;
+            
+            try {
+                if (protocol === 'rest') {
+                    const url = document.getElementById('deviceUrl').value;
+                    const response = await fetch(`${url}/api/status`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    if (response.ok) {
+                        showAlert('connectionStatus', 'success', `✓ Connection test successful (${response.status})`);
+                    } else {
+                        showAlert('connectionStatus', 'warning', `Device responded with status ${response.status}`);
+                    }
+                } else {
+                    showAlert('connectionStatus', 'info', 'Please connect first to test other protocols');
+                }
+            } catch (error) {
+                showAlert('connectionStatus', 'error', `Connection test failed: ${error.message}`);
+            }
+        }
+
+        // Logging
+        function addLog(level, message) {
+            const logViewer = document.getElementById('logViewer');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${level}`;
+            entry.textContent = `[${timestamp}] ${level.toUpperCase()}: ${message}`;
+            
+            logViewer.appendChild(entry);
+            logViewer.scrollTop = logViewer.scrollHeight;
+
+            // Keep only last 100 logs
+            while (logViewer.children.length > 100) {
+                logViewer.removeChild(logViewer.firstChild);
+            }
+        }
+
+        function clearLogs() {
+            document.getElementById('logViewer').innerHTML = 'Logs cleared...';
+        }
+
+        function exportLogs() {
+            const logs = document.getElementById('logViewer').textContent;
+            const blob = new Blob([logs], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `device-logs-${Date.now()}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
